@@ -13,7 +13,7 @@ __version__ = '0.1.0'
 _wrapped_objs = {}
 
 
-def wrap(obj, wrapper, methods_to_add=None, name=None):
+def wrap(obj, wrapper=None, methods_to_add=None, name=None):
     """
     Wrap module, class, function or another variable recursively (classes are wrapped using `ClassProxy` from `wrapt`
     package)
@@ -55,7 +55,9 @@ def wrap(obj, wrapper, methods_to_add=None, name=None):
         @wraps(obj)
         def method_wrapper(*args, **kwargs):
             is_magic = obj.__name__.startswith('__') and obj.__name__.endswith('__')
-            if obj.__name__ == '__getattr__':
+            if wrapper is None:
+                return obj(*args, **kwargs)
+            elif obj.__name__ == '__getattr__':
                 return wrapper(obj(*args, **kwargs))
             elif is_magic:
                 return obj(*args, **kwargs)
