@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "module-wrapper"
+version = "0.1.0"
+description = "Module wrapper Python library"
+authors = ["Roman Inflianskas <infroma@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+keywords = ["module", "wrapper", "proxy", "decorator"]
+classifiers = [
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.poetry.dependencies]
+python = "^2.7 || ^3.5"
+
+[tool.poetry.dev-dependencies]
+pytest = "^3.8"
