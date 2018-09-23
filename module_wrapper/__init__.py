@@ -20,8 +20,8 @@ def wrap(obj, wrapper=None, methods_to_add=None, name=None):
 
     :param Any obj: Object to wrap recursively
     :param Callable wrapper: Wrapper to wrap functions and methods in (accepts function as argument)
-    :param Container[Callable] methods_to_add: Container of functions, which accept class as argument, to add for all
-    classes
+    :param Container[Callable] methods_to_add: Container of functions, which accept class as argument, and return
+    tuple of method name and method to add to all classes
     :param str name: Name of module to wrap to (if `obj` is module)
     :return: Wrapped `obj`
     """
@@ -45,7 +45,8 @@ def wrap(obj, wrapper=None, methods_to_add=None, name=None):
             wrapped_obj = wrapt.ClassProxy(obj)
             members = inspect.getmembers(object=wrapped_obj)
             for method_to_add in methods_to_add:
-                setattr(wrapped_obj, method_to_add.__name__, method_to_add(partial(wrapped_obj)))
+                method_name, method = method_to_add(partial(wrapped_obj))
+                setattr(wrapped_obj, method_name, method)
 
         _wrapped_objs[key] = wrapped_obj
         for attr_name, attr_value in members:

@@ -14,6 +14,9 @@ import asyncio
 import module_wrapper
 
 
+__all__ = ['aioify']
+
+
 def wrap(func):
     @wraps(func)
     async def run(*args, loop=None, executor=None, **kwargs):
@@ -26,7 +29,7 @@ def wrap(func):
 
 def aioify(obj, name=None):
     def create(cls):
-        return wrap(cls)
+        return 'create', wrap(cls)
 
     return module_wrapper.wrap(obj=obj, wrapper=wrap, methods_to_add={create}, name=name)
 ```
