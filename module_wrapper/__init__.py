@@ -13,6 +13,17 @@ __version__ = '0.1.0'
 _wrapped_objs = {}
 
 
+# noinspection PyPep8Naming
+def ClassProxy(wrapped):
+    # noinspection PyShadowingNames
+    class ClassProxy(wrapt.CallableObjectProxy):
+        def __init__(self, *args, **kwargs):
+            super().__init__(wrapped=wrapped)
+            self.__wrapped__ = wrapped(*args, **kwargs)
+
+    return ClassProxy
+
+
 def wrap(obj, wrapper=None, methods_to_add=None, name=None):
     """
     Wrap module, class, function or another variable recursively (classes are wrapped using `ClassProxy` from `wrapt`
@@ -42,7 +53,7 @@ def wrap(obj, wrapper=None, methods_to_add=None, name=None):
             with suppress(ModuleNotFoundError):
                 members = inspect.getmembers(object=obj)
         else:
-            wrapped_obj = wrapt.ClassProxy(obj)
+            wrapped_obj = ClassProxy(obj)
             members = inspect.getmembers(object=wrapped_obj)
             for method_to_add in methods_to_add:
                 method_name, method = method_to_add(partial(wrapped_obj))
