@@ -8,13 +8,13 @@
 recursively.
 
 ## Installation
-To install from PyPI: https://pypi.org/project/module-wrapper/ run:
+To install from [PyPI](https://pypi.org/project/module-wrapper/) run:
 ```shell
 $ pip install module-wrapper
 ```
 
 ## Usage
-Example from https://github.com/rominf/aioify:
+Example from [aioify](https://github.com/yifeikong/aioify):
 ```pyhton
 from functools import wraps, partial
 import asyncio
