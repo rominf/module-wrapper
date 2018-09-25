@@ -15,7 +15,7 @@ To install from `PyPI  <https://pypi.org/project/module-wrapper/>`_ run::
 Usage
 =====
 
-Example from `aioify <https://github.com/rominf/aioify>`_::
+Example from `aioify <https://github.com/yifeikong/aioify>`_::
 
     from functools import wraps, partial
     import asyncio
