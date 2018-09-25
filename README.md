@@ -1,5 +1,5 @@
 # module-wrapper - module wrapper Python library
-![License](https://img.shields.io/pypi/l/module-wrapper.svg)
+[![License](https://img.shields.io/pypi/l/module-wrapper.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![PyPI](https://img.shields.io/pypi/v/module-wrapper.svg)](https://pypi.org/project/module-wrapper/)
 [![Documentation Status](https://img.shields.io/readthedocs/module-wrapper.svg)](http://module-wrapper.readthedocs.io/en/latest/)
  
