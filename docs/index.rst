@@ -1,8 +1,3 @@
-.. module-wrapper documentation master file, created by
-   sphinx-quickstart on Tue Sep 25 10:16:23 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to module-wrapper's documentation!
 ==========================================
 
@@ -10,6 +5,8 @@ Welcome to module-wrapper's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+.. automodule:: module_wrapper
+    :members:
 
 
 Indices and tables
