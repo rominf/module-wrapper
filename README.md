@@ -1,8 +1,10 @@
 # module-wrapper - module wrapper Python library
+![License](https://img.shields.io/pypi/l/module-wrapper.svg)
+[![PyPI](https://img.shields.io/pypi/v/module-wrapper.svg)](https://pypi.org/project/module-wrapper/)
+[![Documentation Status](https://img.shields.io/readthedocs/module-wrapper.svg)](http://module-wrapper.readthedocs.io/en/latest/)
+ 
 `module-wrapper` contains `wrap` function, which is used to wrap module, class, function or another variable 
 recursively.
-
-For more information see: 
 
 ## Installation
 To install from PyPI: https://pypi.org/project/module-wrapper/ run:
