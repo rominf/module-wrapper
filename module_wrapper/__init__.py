@@ -24,29 +24,32 @@ def ClassProxy(wrapped):
     return ClassProxy
 
 
-def wrap(obj, wrapper=None, methods_to_add=None, name=None):
+def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=()):
     """
     Wrap module, class, function or another variable recursively (classes are wrapped using `ClassProxy` from `wrapt`
     package)
 
     :param Any obj: Object to wrap recursively
     :param Callable wrapper: Wrapper to wrap functions and methods in (accepts function as argument)
-    :param Container[Callable] methods_to_add: Container of functions, which accept class as argument, and return \
+    :param Collection[Callable] methods_to_add: Container of functions, which accept class as argument, and return \
     tuple of method name and method to add to all classes
     :param str name: Name of module to wrap to (if `obj` is module)
+    :param Collection[str] skip: Items to skip wrapping
     :return: Wrapped `obj`
     """
-    methods_to_add = methods_to_add or set()
     key = (obj, wrapper, name)
-    if key in _wrapped_objs:
-        return _wrapped_objs[key]
-    if inspect.ismodule(obj) or inspect.isclass(obj):
+    attr_name = name or obj.__name__
+
+    if attr_name in skip:
+        wrapped_obj = obj
+    elif key in _wrapped_objs:
+        wrapped_obj = _wrapped_objs[key]
+    elif inspect.ismodule(obj) or inspect.isclass(obj):
         if inspect.ismodule(obj):
             # noinspection PyUnresolvedReferences
             class ModuleWrapper(types.ModuleType):
                 pass
 
-            attr_name = name or obj.__name__
             wrapped_obj = ModuleWrapper(name=attr_name)
             # noinspection PyUnusedLocal
             members = []
@@ -62,7 +65,8 @@ def wrap(obj, wrapper=None, methods_to_add=None, name=None):
         _wrapped_objs[key] = wrapped_obj
         for attr_name, attr_value in members:
             with suppress(AttributeError, TypeError):
-                setattr(wrapped_obj, attr_name, wrap(obj=attr_value, wrapper=wrapper, methods_to_add=methods_to_add))
+                attr_value_new = wrap(obj=attr_value, wrapper=wrapper, methods_to_add=methods_to_add, skip=skip)
+                setattr(wrapped_obj, attr_name, attr_value_new)
     elif callable(obj):
         @wraps(obj)
         def method_wrapper(*args, **kwargs):
