@@ -38,7 +38,10 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=()):
     :return: Wrapped `obj`
     """
     key = (obj, wrapper, name)
-    attr_name = name or obj.__name__
+    try:
+        attr_name = name or obj.__name__
+    except AttributeError:
+        raise ValueError("name was not passed and obj.__name__ not found")
 
     if attr_name in skip:
         wrapped_obj = obj
