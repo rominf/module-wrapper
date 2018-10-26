@@ -3,13 +3,12 @@ from functools import partial, wraps
 import inspect
 import types
 
+import poetry_version
 import wrapt
 
 
 __all__ = ['wrap', '__version__']
-__version__ = '0.1.0'
-
-
+__version__ = poetry_version.extract(source_file=__file__)
 _wrapped_objs = {}
 
 
