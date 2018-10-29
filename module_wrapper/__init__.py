@@ -46,7 +46,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
 
     def add_methods():
         for method_to_add in methods_to_add:
-            method_name, method = method_to_add(partial(wrapped_obj))
+            method_name, method = method_to_add(wrapped_obj)
             setattr(wrapped_obj, method_name, method)
 
     def wrap_module_or_class_or_object():
