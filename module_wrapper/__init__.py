@@ -4,6 +4,7 @@ from functools import partial, wraps
 import inspect
 import types
 
+from wrapt import ObjectProxy
 import poetry_version
 import wrapt
 
@@ -43,6 +44,48 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         with suppress(AttributeError):
             return name or obj.__name__
 
+    def add_methods():
+        for method_to_add in methods_to_add:
+            method_name, method = method_to_add(partial(wrapped_obj))
+            setattr(wrapped_obj, method_name, method)
+
+    def wrap_module_or_class_or_object():
+        add_methods()
+        # noinspection PyUnusedLocal
+        members = []
+        with suppress(ModuleNotFoundError):
+            members = inspect.getmembers(object=obj)
+        _wrapped_objs[key] = wrapped_obj
+        # noinspection PyShadowingNames
+        for attr_name, attr_value in members:
+            with suppress(AttributeError, TypeError):
+                attr_value_new = wrap(obj=attr_value,
+                                      wrapper=wrapper,
+                                      methods_to_add=methods_to_add,
+                                      name=get_name() or attr_name,
+                                      skip=skip,
+                                      wrap_return_values=wrap_return_values)
+                setattr(wrapped_obj, attr_name, attr_value_new)
+
+    @wraps(obj)
+    def method_wrapper(*args, **kwargs):
+        is_magic = obj.__name__.startswith('__') and obj.__name__.endswith('__')
+        if wrapper is None:
+            result = obj(*args, **kwargs)
+        elif obj.__name__ == '__getattr__':
+            result = wrapper(obj(*args, **kwargs))
+        elif is_magic:
+            result = obj(*args, **kwargs)
+        else:
+            result = wrapper(obj)(*args, **kwargs)
+        if wrap_return_values:
+            result = wrap(obj=result,
+                          wrapper=wrapper,
+                          methods_to_add=methods_to_add,
+                          skip=skip,
+                          wrap_return_values=wrap_return_values)
+        return result
+
     key = (obj, wrapper, name)
     attr_name = get_name()
     if attr_name is None:
@@ -59,50 +102,17 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 pass
 
             wrapped_obj = ModuleWrapper(name=attr_name)
-            # noinspection PyUnusedLocal
-            members = []
-            with suppress(ModuleNotFoundError):
-                members = inspect.getmembers(object=obj)
         else:
-            wrapped_obj = ClassProxy(obj)
-            members = inspect.getmembers(object=wrapped_obj)
-            for method_to_add in methods_to_add:
-                method_name, method = method_to_add(partial(wrapped_obj))
-                setattr(wrapped_obj, method_name, method)
-
-        _wrapped_objs[key] = wrapped_obj
-        for attr_name, attr_value in members:
-            with suppress(AttributeError, TypeError):
-                attr_value_new = wrap(obj=attr_value,
-                                      wrapper=wrapper,
-                                      methods_to_add=methods_to_add,
-                                      name=get_name() or attr_name,
-                                      skip=skip,
-                                      wrap_return_values=wrap_return_values)
-                setattr(wrapped_obj, attr_name, attr_value_new)
+            wrapped_obj = ClassProxy(wrapped=obj)
+        wrap_module_or_class_or_object()
     elif callable(obj):
-        @wraps(obj)
-        def method_wrapper(*args, **kwargs):
-            is_magic = obj.__name__.startswith('__') and obj.__name__.endswith('__')
-            if wrapper is None:
-                result = obj(*args, **kwargs)
-            elif obj.__name__ == '__getattr__':
-                result = wrapper(obj(*args, **kwargs))
-            elif is_magic:
-                result = obj(*args, **kwargs)
-            else:
-                result = wrapper(obj)(*args, **kwargs)
-            if wrap_return_values:
-                result = wrap(obj=result,
-                              wrapper=wrapper,
-                              methods_to_add=methods_to_add,
-                              skip=skip,
-                              wrap_return_values=wrap_return_values)
-            return result
-
         wrapped_obj = method_wrapper
         _wrapped_objs[key] = wrapped_obj
     else:
-        wrapped_obj = obj
+        if inspect.getmembers(object=obj):
+            wrapped_obj = ObjectProxy(wrapped=obj)
+            wrap_module_or_class_or_object()
+        else:
+            wrapped_obj = obj
         _wrapped_objs[key] = wrapped_obj
     return wrapped_obj
