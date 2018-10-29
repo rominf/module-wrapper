@@ -1,3 +1,4 @@
+
 from contextlib import suppress
 from functools import partial, wraps
 import inspect
@@ -38,10 +39,13 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     are supported)
     :return: Wrapped `obj`
     """
+    def get_name():
+        with suppress(AttributeError):
+            return name or obj.__name__
+
     key = (obj, wrapper, name)
-    try:
-        attr_name = name or obj.__name__
-    except AttributeError:
+    attr_name = get_name()
+    if attr_name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
     if attr_name in skip:
@@ -72,6 +76,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 attr_value_new = wrap(obj=attr_value,
                                       wrapper=wrapper,
                                       methods_to_add=methods_to_add,
+                                      name=get_name() or attr_name,
                                       skip=skip,
                                       wrap_return_values=wrap_return_values)
                 setattr(wrapped_obj, attr_name, attr_value_new)
