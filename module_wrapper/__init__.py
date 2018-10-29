@@ -1,7 +1,7 @@
-
 from contextlib import suppress
-from functools import partial, wraps
+from functools import wraps
 import inspect
+import sys
 import types
 
 from wrapt import ObjectProxy
@@ -12,6 +12,11 @@ import wrapt
 __all__ = ['wrap', '__version__']
 __version__ = poetry_version.extract(source_file=__file__)
 _wrapped_objs = {}
+
+
+# noinspection PyUnresolvedReferences
+class ModuleWrapper(types.ModuleType):
+    pass
 
 
 # noinspection PyPep8Naming
@@ -92,16 +97,12 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     if attr_name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
-    if attr_name in skip:
+    if obj == sys or isinstance(obj, types.FrameType) or attr_name in skip:
         wrapped_obj = obj
     elif key in _wrapped_objs:
         wrapped_obj = _wrapped_objs[key]
     elif inspect.ismodule(obj) or inspect.isclass(obj):
         if inspect.ismodule(obj):
-            # noinspection PyUnresolvedReferences
-            class ModuleWrapper(types.ModuleType):
-                pass
-
             wrapped_obj = ModuleWrapper(name=attr_name)
         else:
             wrapped_obj = ClassProxy(wrapped=obj)
