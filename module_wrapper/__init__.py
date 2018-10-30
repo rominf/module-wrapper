@@ -188,7 +188,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         wrapped_obj = method_wrapper
         _wrapped_objs[key] = wrapped_obj
     else:
-        if inspect.getmembers(object=obj):
+        if getmembers(object=obj):
             wrapped_obj = ObjectProxy(wrapped=obj)
             wrap_module_or_class_or_object()
         else:
