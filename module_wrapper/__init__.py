@@ -30,6 +30,58 @@ def ClassProxy(wrapped):
     return ClassProxy
 
 
+# A fix for https://bugs.python.org/issue35108
+RAISES_EXCEPTION = object()
+
+
+# noinspection PyShadowingBuiltins
+def getmembers(object, predicate=None):
+    """Return all members of an object as (name, value) pairs sorted by name.
+    Optionally, only return members that satisfy a given predicate."""
+    if inspect.isclass(object):
+        mro = (object,) + inspect.getmro(object)
+    else:
+        mro = ()
+    results = []
+    processed = set()
+    names = dir(object)
+    # :dd any DynamicClassAttributes to the list of names if object is a class;
+    # this may result in duplicate entries if, for example, a virtual
+    # attribute with the same name as a DynamicClassAttribute exists
+    try:
+        for base in object.__bases__:
+            for k, v in base.__dict__.items():
+                if isinstance(v, types.DynamicClassAttribute):
+                    names.append(k)
+    except AttributeError:
+        pass
+    for key in names:
+        # First try to get the value via getattr.  Some descriptors don't
+        # like calling their __get__ (see bug #1785), so fall back to
+        # looking in the __dict__.
+        try:
+            value = getattr(object, key)
+            # handle the duplicate key
+            if key in processed:
+                raise AttributeError
+        except AttributeError:
+            for base in mro:
+                if key in base.__dict__:
+                    value = base.__dict__[key]
+                    break
+            else:
+                # could be a (currently) missing slot member, or a buggy
+                # __dir__; discard and move on
+                continue
+        except Exception as e:
+            value = (RAISES_EXCEPTION, e)
+        if not predicate or predicate(value):
+            results.append((key, value))
+        processed.add(key)
+    results.sort(key=lambda pair: pair[0])
+    return results
+
+
 def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False):
     """
     Wrap module, class, function or another variable recursively (classes are wrapped using `ClassProxy` from `wrapt`
@@ -62,10 +114,16 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         # noinspection PyUnusedLocal
         members = []
         with suppress(ModuleNotFoundError):
-            members = inspect.getmembers(object=obj)
+            members = getmembers(object=obj)
         _wrapped_objs[key] = wrapped_obj
         # noinspection PyShadowingNames
         for attr_name, attr_value in members:
+            if not inspect.ismodule(object=obj) and isinstance(attr_value, tuple) and attr_value[0] == RAISES_EXCEPTION:
+                def raise_exception(self):
+                    _ = self
+                    raise attr_value[1]
+
+                attr_value = property(raise_exception)
             with suppress(AttributeError, TypeError):
                 attr_value_new = wrap(obj=attr_value,
                                       wrapper=wrapper,
