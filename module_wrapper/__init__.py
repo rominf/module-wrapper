@@ -160,6 +160,13 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         result = wrap_return_values_(result=result)
         return result
 
+    @wraps(obj)
+    async def coroutine_wrapper(*args, **kwargs):
+        w = wrapper(obj)
+        result = await w(*args, **kwargs)
+        result = wrap_return_values_(result=result)
+        return result
+
     def is_non_wrappable():
         return obj == sys or isinstance(obj, types.FrameType)
 
@@ -194,6 +201,9 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         wrap_module_or_class_or_object()
     elif callable(obj):
         wrapped_obj = method_wrapper
+        _wrapped_objs[key] = wrapped_obj
+    elif inspect.iscoroutine(object=obj):
+        wrapped_obj = coroutine_wrapper
         _wrapped_objs[key] = wrapped_obj
     else:
         if getmembers(object=obj):

@@ -12,7 +12,7 @@ classifiers = [
 repository = "https://github.com/rominf/module-wrapper"
 
 [tool.poetry.dependencies]
-python = "^2.7 || ^3.5"
+python = "^3.5"
 wrapt = {git = "https://github.com/rominf/wrapt/"}
 
 [tool.poetry.dev-dependencies]
