@@ -40,7 +40,9 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     :param Collection[Callable] methods_to_add: Container of functions, which accept class as argument, and return \
     tuple of method name and method to add to all classes
     :param str name: Name of module to wrap to (if `obj` is module)
-    :param Collection[str] skip: Items to skip wrapping
+    :param Collection[Union[str, type, Any]] skip: Items to skip wrapping (if an item of a collection is the str, wrap \
+    will check the obj name, if an item of a collection is the type, wrap will check the obj type, else wrap will \
+    check an item itself)
     :param bool wrap_return_values: If try, wrap return values of callables (only types, supported by wrap function \
     are supported)
     :return: Wrapped `obj`
@@ -95,12 +97,26 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     def is_non_wrappable():
         return obj == sys or isinstance(obj, types.FrameType)
 
+    def need_to_skip():
+        result = False
+        for s in skip:
+            if isinstance(s, str):
+                if name == s:
+                    result = True
+            elif isinstance(s, type):
+                if isinstance(obj, s):
+                    result = True
+            else:
+                if obj == s:
+                    result = True
+        return result
+
     key = (obj, wrapper, name)
     attr_name = get_name()
     if attr_name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
-    if is_non_wrappable() or attr_name in skip:
+    if is_non_wrappable() or need_to_skip():
         wrapped_obj = obj
     elif key in _wrapped_objs:
         wrapped_obj = _wrapped_objs[key]
