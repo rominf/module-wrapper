@@ -99,9 +99,15 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     are supported)
     :return: Wrapped `obj`
     """
-    def get_name():
-        with suppress(AttributeError):
-            return name or obj.__name__
+    # noinspection PyShadowingNames
+    def get_name(*names):
+        for obj in names:
+            try:
+                name = obj.__name__
+            except AttributeError:
+                name = obj
+            if name:
+                return name
 
     def add_methods():
         for method_to_add in methods_to_add:
@@ -128,7 +134,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 attr_value_new = wrap(obj=attr_value,
                                       wrapper=wrapper,
                                       methods_to_add=methods_to_add,
-                                      name=get_name() or attr_name,
+                                      name=get_name(attr_value, attr_name),
                                       skip=skip,
                                       wrap_return_values=wrap_return_values)
                 setattr(wrapped_obj, attr_name, attr_value_new)
@@ -184,9 +190,9 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                     result = True
         return result
 
+    name = get_name(name, obj)
     key = (obj, wrapper, name)
-    attr_name = get_name()
-    if attr_name is None:
+    if name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
     if is_non_wrappable() or need_to_skip():
@@ -195,7 +201,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         wrapped_obj = _wrapped_objs[key]
     elif inspect.ismodule(obj) or inspect.isclass(obj):
         if inspect.ismodule(obj):
-            wrapped_obj = ModuleWrapper(name=attr_name)
+            wrapped_obj = ModuleWrapper(name=name)
         else:
             wrapped_obj = ClassProxy(wrapped=obj)
         wrap_module_or_class_or_object()
