@@ -133,6 +133,19 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                                       wrap_return_values=wrap_return_values)
                 setattr(wrapped_obj, attr_name, attr_value_new)
 
+    def wrap_return_values_(result):
+        if wrap_return_values:
+            # noinspection PyTypeChecker
+            result = wrap(obj=result,
+                          wrapper=wrapper,
+                          methods_to_add=methods_to_add,
+                          name=get_name(result, 'result'),
+                          skip=skip,
+                          wrap_return_values=wrap_return_values)
+            if callable(result):
+                result = result()
+        return result
+
     @wraps(obj)
     def method_wrapper(*args, **kwargs):
         is_magic = obj.__name__.startswith('__') and obj.__name__.endswith('__')
@@ -144,12 +157,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             result = obj(*args, **kwargs)
         else:
             result = wrapper(obj)(*args, **kwargs)
-        if wrap_return_values:
-            result = wrap(obj=result,
-                          wrapper=wrapper,
-                          methods_to_add=methods_to_add,
-                          skip=skip,
-                          wrap_return_values=wrap_return_values)
+        result = wrap_return_values_(result=result)
         return result
 
     def is_non_wrappable():
