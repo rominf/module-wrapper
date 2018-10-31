@@ -140,7 +140,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                                       name=get_name(attr_value, attr_name),
                                       skip=skip,
                                       wrap_return_values=wrap_return_values)
-                setattr(wrapped_obj, attr_name, attr_value_new)
+                with suppress(Exception):
+                    setattr(wrapped_obj, attr_name, attr_value_new)
 
     def wrap_return_values_(result):
         if wrap_return_values:

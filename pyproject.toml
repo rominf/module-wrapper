@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "module-wrapper"
-version = "0.1.17"
+version = "0.1.18"
 description = "Module wrapper Python library"
 authors = ["Roman Inflianskas <infroma@gmail.com>"]
 license = "Apache-2.0"
