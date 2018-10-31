@@ -124,7 +124,10 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         _wrapped_objs[key] = wrapped_obj
         # noinspection PyShadowingNames
         for attr_name, attr_value in members:
-            if not inspect.ismodule(object=obj) and isinstance(attr_value, tuple) and attr_value[0] == RAISES_EXCEPTION:
+            raises_exception = (isinstance(attr_value, tuple) and
+                                len(attr_value) > 0 and
+                                attr_value[0] == RAISES_EXCEPTION)
+            if raises_exception and not inspect.ismodule(object=obj):
                 def raise_exception(self):
                     _ = self
                     raise attr_value[1]
