@@ -1,5 +1,6 @@
 from contextlib import suppress
 from functools import wraps
+from pathlib import Path
 import inspect
 import sys
 import types
@@ -82,21 +83,22 @@ def getmembers(object, predicate=None):
     return results
 
 
-def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False):
+def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, wrap_files=None):
     """
     Wrap module, class, function or another variable recursively (classes are wrapped using `ClassProxy` from `wrapt`
     package)
 
     :param Any obj: Object to wrap recursively
-    :param Callable wrapper: Wrapper to wrap functions and methods in (accepts function as argument)
+    :param Optional[Callable] wrapper: Wrapper to wrap functions and methods in (accepts function as argument)
     :param Collection[Callable] methods_to_add: Container of functions, which accept class as argument, and return \
     tuple of method name and method to add to all classes
-    :param str name: Name of module to wrap to (if `obj` is module)
+    :param Optional[str] name: Name of module to wrap to (if `obj` is module)
     :param Collection[Union[str, type, Any]] skip: Items to skip wrapping (if an item of a collection is the str, wrap \
     will check the obj name, if an item of a collection is the type, wrap will check the obj type, else wrap will \
     check an item itself)
     :param bool wrap_return_values: If try, wrap return values of callables (only types, supported by wrap function \
     are supported)
+    :param Collection[str] wrap_files: Files to wrap
     :return: Wrapped `obj`
     """
     # noinspection PyShadowingNames
@@ -139,7 +141,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                                       methods_to_add=methods_to_add,
                                       name=get_name(attr_value, attr_name),
                                       skip=skip,
-                                      wrap_return_values=wrap_return_values)
+                                      wrap_return_values=wrap_return_values,
+                                      wrap_files=wrap_files)
                 with suppress(Exception):
                     setattr(wrapped_obj, attr_name, attr_value_new)
 
@@ -151,7 +154,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                           methods_to_add=methods_to_add,
                           name=get_name(result, 'result'),
                           skip=skip,
-                          wrap_return_values=wrap_return_values)
+                          wrap_return_values=wrap_return_values,
+                          wrap_files=wrap_files)
             if callable(result):
                 result = result()
         return result
@@ -194,12 +198,40 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                     result = True
         return result
 
+    def get_obj_file():
+        try:
+            result = (obj.__file__
+                      if hasattr(obj, '__file__') else
+                      sys.modules[obj.__module__].__file__
+                      if hasattr(obj, '__module__') else
+                      None)
+        except (AttributeError, KeyError):
+            result = None
+        return result
+
+    def get_obj_library_files():
+        obj_file = get_obj_file()
+        if obj_file is not None:
+            obj_file = Path(obj_file)
+            if obj_file.name == '__init__.py':
+                result = obj_file.parent.glob('**/*.py')
+            else:
+                result = [obj_file]
+            result = [str(obj_file) for obj_file in result]
+        else:
+            result = []
+        return result
+
     name = get_name(name, obj)
-    key = (obj, wrapper, name)
     if name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
-    if is_non_wrappable() or is_in_skip():
+    key = (obj, wrapper, name)
+
+    if wrap_files is None:
+        wrap_files = get_obj_library_files()
+
+    if get_obj_file() not in wrap_files or is_non_wrappable() or is_in_skip():
         wrapped_obj = obj
     elif key in _wrapped_objs:
         wrapped_obj = _wrapped_objs[key]
