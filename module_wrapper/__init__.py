@@ -182,9 +182,6 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         result = wrap_return_values_(result=result)
         return result
 
-    def is_non_wrappable():
-        return obj == sys or isinstance(obj, types.FrameType)
-
     def is_in_skip():
         result = False
         for s in skip:
@@ -232,7 +229,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     if wrap_files is None:
         wrap_files = get_obj_library_files()
 
-    if get_obj_file() not in wrap_files or is_non_wrappable() or is_in_skip():
+    if get_obj_file() not in wrap_files or is_in_skip():
         wrapped_obj = obj
     elif key in _wrapped_objs:
         wrapped_obj = _wrapped_objs[key]
