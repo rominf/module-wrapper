@@ -126,25 +126,26 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         _wrapped_objs[key] = wrapped_obj
         # noinspection PyShadowingNames
         for attr_name, attr_value in members:
-            raises_exception = (isinstance(attr_value, tuple) and
-                                len(attr_value) > 0 and
-                                attr_value[0] == RAISES_EXCEPTION)
-            if raises_exception and not inspect.ismodule(object=obj):
-                def raise_exception(self):
-                    _ = self
-                    raise attr_value[1]
+            if attr_name != '__init__':
+                raises_exception = (isinstance(attr_value, tuple) and
+                                    len(attr_value) > 0 and
+                                    attr_value[0] == RAISES_EXCEPTION)
+                if raises_exception and not inspect.ismodule(object=obj):
+                    def raise_exception(self):
+                        _ = self
+                        raise attr_value[1]
 
-                attr_value = property(raise_exception)
-            with suppress(AttributeError, TypeError):
-                attr_value_new = wrap(obj=attr_value,
-                                      wrapper=wrapper,
-                                      methods_to_add=methods_to_add,
-                                      name=get_name(attr_value, attr_name),
-                                      skip=skip,
-                                      wrap_return_values=wrap_return_values,
-                                      wrap_files=wrap_files)
-                with suppress(Exception):
-                    setattr(wrapped_obj, attr_name, attr_value_new)
+                    attr_value = property(raise_exception)
+                with suppress(AttributeError, TypeError):
+                    attr_value_new = wrap(obj=attr_value,
+                                          wrapper=wrapper,
+                                          methods_to_add=methods_to_add,
+                                          name=get_name(attr_value, attr_name),
+                                          skip=skip,
+                                          wrap_return_values=wrap_return_values,
+                                          wrap_files=wrap_files)
+                    with suppress(Exception):
+                        setattr(wrapped_obj, attr_name, attr_value_new)
 
     def wrap_return_values_(result):
         if wrap_return_values:
