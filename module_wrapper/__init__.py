@@ -180,7 +180,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     def is_non_wrappable():
         return obj == sys or isinstance(obj, types.FrameType)
 
-    def need_to_skip():
+    def is_in_skip():
         result = False
         for s in skip:
             if isinstance(s, str):
@@ -199,7 +199,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     if name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
-    if is_non_wrappable() or need_to_skip():
+    if is_non_wrappable() or is_in_skip():
         wrapped_obj = obj
     elif key in _wrapped_objs:
         wrapped_obj = _wrapped_objs[key]
