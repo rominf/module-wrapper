@@ -138,7 +138,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         add_methods()
         _wrapped_objs[key] = wrapped_obj
         for attr_name, attr_value in members:
-            if attr_name not in ['__init__', '__new__']:
+            if attr_name != '__new__':
                 raises_exception = (isinstance(attr_value, tuple) and
                                     len(attr_value) > 0 and
                                     attr_value[0] == RAISES_EXCEPTION)
@@ -264,10 +264,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         class ClassProxy:
             @staticmethod
             def __new__(cls, *args, **kwargs):
-                if super().__new__ is object.__new__:
-                    args, kwargs = [], {}
                 # noinspection PyUnresolvedReferences
-                original_obj_object = super().__new__(cls._original_obj, *args, **kwargs)
+                original_obj_object = cls._original_obj(*args, **kwargs)
                 # noinspection PyArgumentList
                 result = wrap(obj=original_obj_object,
                               wrapper=wrapper,
@@ -279,10 +277,6 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                               wrapped_name_func=wrapped_name_func,
                               filename=filename)
                 return result
-
-            def __init__(self, *args, **kwargs):
-                # noinspection PyUnresolvedReferences
-                self._original_obj.__init__(*args, **kwargs)
 
         class ObjectProxy:
             pass
