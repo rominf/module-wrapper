@@ -104,6 +104,30 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     name of wrapped `obj` that will be written into wrapped `obj`
     :return: Wrapped `obj`
     """
+    # noinspection PyUnresolvedReferences
+    class ModuleProxy(types.ModuleType):
+        pass
+
+    class ClassProxy:
+        @staticmethod
+        def __new__(cls, *args, **kwargs):
+            # noinspection PyUnresolvedReferences
+            original_obj_object = cls._original_obj(*args, **kwargs)
+            # noinspection PyArgumentList
+            result = wrap(obj=original_obj_object,
+                          wrapper=wrapper,
+                          methods_to_add=methods_to_add,
+                          name=name,
+                          skip=skip,
+                          wrap_return_values=wrap_return_values,
+                          wrap_filenames=wrap_filenames,
+                          filename=filename,
+                          wrapped_name_func=wrapped_name_func)
+            return result
+
+    class ObjectProxy:
+        pass
+
     # noinspection PyShadowingNames
     def get_name(*names):
         for obj in names:
@@ -257,30 +281,6 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         return result
 
     def create_proxy(proxy_type):
-        # noinspection PyUnresolvedReferences
-        class ModuleProxy(types.ModuleType):
-            pass
-
-        class ClassProxy:
-            @staticmethod
-            def __new__(cls, *args, **kwargs):
-                # noinspection PyUnresolvedReferences
-                original_obj_object = cls._original_obj(*args, **kwargs)
-                # noinspection PyArgumentList
-                result = wrap(obj=original_obj_object,
-                              wrapper=wrapper,
-                              methods_to_add=methods_to_add,
-                              name=name,
-                              skip=skip,
-                              wrap_return_values=wrap_return_values,
-                              wrap_filenames=wrap_filenames,
-                              wrapped_name_func=wrapped_name_func,
-                              filename=filename)
-                return result
-
-        class ObjectProxy:
-            pass
-
         return {
             ProxyType.MODULE: ModuleProxy(name=name),
             ProxyType.CLASS: ClassProxy,
