@@ -181,8 +181,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                                           skip=skip,
                                           wrap_return_values=wrap_return_values,
                                           wrap_filenames=wrap_filenames,
-                                          wrapped_name_func=wrapped_name_func,
-                                          filename=get_obj_file(obj=attr_value) or filename)
+                                          filename=get_obj_file(obj=attr_value) or filename,
+                                          wrapped_name_func=wrapped_name_func)
                     with suppress(Exception):
                         setattr(wrapped_obj, attr_name, attr_value_new)
         return wrapped_obj
@@ -197,8 +197,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                           skip=skip,
                           wrap_return_values=wrap_return_values,
                           wrap_filenames=wrap_filenames,
-                          wrapped_name_func=wrapped_name_func,
-                          filename=filename)
+                          filename=filename,
+                          wrapped_name_func=wrapped_name_func)
         return result
 
     def function_or_method_wrapper():
