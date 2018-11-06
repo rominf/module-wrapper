@@ -131,7 +131,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         else:
             wrapped_obj = create_proxy(proxy_type=ProxyType.OBJECT)
         _wrapped_objs[key] = wrapped_obj
-        setattr(wrapped_obj, wrapped_name_func(obj), obj)
+        with suppress(AttributeError):
+            setattr(wrapped_obj, wrapped_name_func(obj), obj)
         if obj_type in [ObjectType.FUNCTION_OR_METHOD, ObjectType.COROUTINE]:
             return wrapped_obj
         add_methods()
