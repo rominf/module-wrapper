@@ -203,8 +203,16 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
 
     def function_or_method_wrapper():
         is_magic = obj.__name__.startswith('__') and obj.__name__.endswith('__')
-        if wrapper is None or is_magic:
+
+        if wrapper is None:
             result = obj
+        elif is_magic:
+            @wraps(obj)
+            def result(*args, **kwargs):
+                if len(args) > 0 and isinstance(args[0], ClassProxy):
+                    # noinspection PyProtectedMember
+                    args = (object.__getattribute__(args[0], '_original_obj'), ) + args[1:]
+                return obj(*args, **kwargs)
         elif obj.__name__ == '__getattr__':
             @wraps(obj)
             def result(*args, **kwargs):
