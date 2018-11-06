@@ -162,7 +162,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         add_methods()
         _wrapped_objs[key] = wrapped_obj
         for attr_name, attr_value in members:
-            if attr_name != '__new__':
+            if attr_name not in ['__class__', '__new__']:
                 raises_exception = (isinstance(attr_value, tuple) and
                                     len(attr_value) > 0 and
                                     attr_value[0] == RAISES_EXCEPTION)
