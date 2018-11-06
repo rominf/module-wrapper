@@ -108,22 +108,28 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     class ModuleProxy(types.ModuleType):
         pass
 
-    class ClassProxy:
-        @staticmethod
-        def __new__(cls, *args, **kwargs):
-            # noinspection PyUnresolvedReferences
-            original_obj_object = cls._original_obj(*args, **kwargs)
-            # noinspection PyArgumentList
-            result = wrap(obj=original_obj_object,
-                          wrapper=wrapper,
-                          methods_to_add=methods_to_add,
-                          name=name,
-                          skip=skip,
-                          wrap_return_values=wrap_return_values,
-                          wrap_filenames=wrap_filenames,
-                          filename=filename,
-                          wrapped_name_func=wrapped_name_func)
-            return result
+    try:
+        # Subclassing from obj to pass isinstance(some_object, obj) checks. If defining the class fails, it means that
+        # `obj` was not a class, that means ClassProxy wouldn't be used, we can create a dummy class.
+        class ClassProxy(obj):
+            @staticmethod
+            def __new__(cls, *args, **kwargs):
+                # noinspection PyUnresolvedReferences
+                original_obj_object = cls._original_obj(*args, **kwargs)
+                # noinspection PyArgumentList
+                result = wrap(obj=original_obj_object,
+                              wrapper=wrapper,
+                              methods_to_add=methods_to_add,
+                              name=name,
+                              skip=skip,
+                              wrap_return_values=wrap_return_values,
+                              wrap_filenames=wrap_filenames,
+                              filename=filename,
+                              wrapped_name_func=wrapped_name_func)
+                return result
+    except TypeError:
+        class ClassProxy:
+            pass
 
     class ObjectProxy:
         pass
