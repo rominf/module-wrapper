@@ -110,7 +110,9 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     """
     # noinspection PyUnresolvedReferences
     class ModuleProxy(types.ModuleType, Proxy):
-        pass
+        # noinspection PyShadowingNames
+        def __init__(self, name, doc=None):
+            super().__init__(name=name, doc=doc)
 
     try:
         # Subclassing from obj to pass isinstance(some_object, obj) checks. If defining the class fails, it means that
@@ -149,28 +151,58 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 return name
 
     # noinspection PyShadowingNames
-    def _wrap():
+    def _wrap(obj, name, members, wrapped_obj=None):
+        def get_obj_type():
+            if inspect.ismodule(object=obj):
+                result = ObjectType.MODULE
+            elif inspect.isclass(object=obj):
+                result = ObjectType.CLASS
+            elif (inspect.isbuiltin(object=obj) or
+                  inspect.isfunction(object=obj) or
+                  inspect.ismethod(object=obj) or
+                  inspect.ismethoddescriptor(object=obj) or
+                  isinstance(obj, MethodWrapper)):
+                result = ObjectType.FUNCTION_OR_METHOD
+            elif inspect.iscoroutine(object=obj):
+                result = ObjectType.COROUTINE
+            else:
+                result = ObjectType.OBJECT
+            return result
+
+        def create_proxy(proxy_type):
+            return {
+                ProxyType.MODULE: ModuleProxy(name=name),
+                ProxyType.CLASS: ClassProxy,
+                ProxyType.OBJECT: ObjectProxy(),
+            }[proxy_type]
+
         def add_methods():
             for method_to_add in methods_to_add:
                 method_name, method = method_to_add(wrapped_obj)
                 if method is not None:
                     setattr(wrapped_obj, method_name, method)
 
-        if obj_type in [ObjectType.MODULE, ObjectType.CLASS]:
-            wrapped_obj = create_proxy(proxy_type=ProxyType.MODULE if inspect.ismodule(obj) else ProxyType.CLASS)
-        elif obj_type == ObjectType.FUNCTION_OR_METHOD:
-            wrapped_obj = function_or_method_wrapper()
-        elif obj_type == ObjectType.COROUTINE:
-            wrapped_obj = coroutine_wrapper
-        else:
-            wrapped_obj = create_proxy(proxy_type=ProxyType.OBJECT)
+        def set_original_obj():
+            with suppress(AttributeError):
+                what = type if obj_type in [ObjectType.MODULE, ObjectType.CLASS] else object
+                what.__setattr__(wrapped_obj, wrapped_name_func(obj), obj)
+
+        obj_type = get_obj_type()
+        if wrapped_obj is None:
+            if obj_type in [ObjectType.MODULE, ObjectType.CLASS]:
+                wrapped_obj = create_proxy(proxy_type=ProxyType.MODULE if inspect.ismodule(obj) else ProxyType.CLASS)
+            elif obj_type == ObjectType.FUNCTION_OR_METHOD:
+                wrapped_obj = function_or_method_wrapper()
+            elif obj_type == ObjectType.COROUTINE:
+                wrapped_obj = coroutine_wrapper
+            else:
+                wrapped_obj = create_proxy(proxy_type=ProxyType.OBJECT)
+        key = (obj, wrapper, name)
         _wrapped_objs[key] = wrapped_obj
-        with suppress(AttributeError):
-            setattr(wrapped_obj, wrapped_name_func(obj), obj)
+        set_original_obj()
         if obj_type in [ObjectType.FUNCTION_OR_METHOD, ObjectType.COROUTINE]:
             return wrapped_obj
         add_methods()
-        _wrapped_objs[key] = wrapped_obj
         for attr_name, attr_value in members:
             if attr_name not in ['__class__', '__new__']:
                 raises_exception = (isinstance(attr_value, tuple) and
@@ -195,6 +227,16 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                                           wrapped_name_func=wrapped_name_func)
                     with suppress(Exception):
                         setattr(wrapped_obj, attr_name, attr_value_new)
+        if obj_type == ObjectType.OBJECT:
+            wrapped_class_name = get_name(obj.__class__)
+            # noinspection PyUnusedLocal
+            class_members = []
+            with suppress(ModuleNotFoundError):
+                class_members = getmembers(object=obj.__class__)
+            _ = _wrap(obj=obj.__class__,
+                      name=wrapped_class_name,
+                      members=class_members,
+                      wrapped_obj=wrapped_obj.__class__)
         return wrapped_obj
 
     def wrap_return_values_(result):
@@ -298,30 +340,6 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             result = []
         return result
 
-    def create_proxy(proxy_type):
-        return {
-            ProxyType.MODULE: ModuleProxy(name=name),
-            ProxyType.CLASS: ClassProxy,
-            ProxyType.OBJECT: ObjectProxy(),
-        }[proxy_type]
-
-    def get_obj_type():
-        if inspect.ismodule(object=obj):
-            result = ObjectType.MODULE
-        elif inspect.isclass(object=obj):
-            result = ObjectType.CLASS
-        elif (inspect.isbuiltin(object=obj) or
-              inspect.isfunction(object=obj) or
-              inspect.ismethod(object=obj) or
-              inspect.ismethoddescriptor(object=obj) or
-              isinstance(obj, MethodWrapper)):
-            result = ObjectType.FUNCTION_OR_METHOD
-        elif inspect.iscoroutine(object=obj):
-            result = ObjectType.COROUTINE
-        else:
-            result = ObjectType.OBJECT
-        return result
-
     if wrapped_name_func is None:
         # noinspection PyShadowingNames
         def wrapped_name_func(obj):
@@ -337,19 +355,17 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     wrap_filenames = wrap_filenames or get_obj_library_files()
     filename = filename or get_obj_file(obj=obj)
 
+    # noinspection PyUnusedLocal
     members = []
     with suppress(ModuleNotFoundError):
-        # noinspection PyRedeclaration
         members = getmembers(object=obj)
-
-    obj_type = get_obj_type()
 
     if filename not in wrap_filenames or is_in_skip():
         wrapped_obj = obj
     elif key in _wrapped_objs:
         wrapped_obj = _wrapped_objs[key]
     elif members:
-        wrapped_obj = _wrap()
+        wrapped_obj = _wrap(obj=obj, name=name, members=members)
     else:
         wrapped_obj = obj
         _wrapped_objs[key] = wrapped_obj
