@@ -28,6 +28,10 @@ class ObjectType(IntEnum):
     OBJECT = 4
 
 
+class Proxy:
+    pass
+
+
 MethodWrapper = type(''.__add__)
 
 
@@ -105,13 +109,13 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     :return: Wrapped `obj`
     """
     # noinspection PyUnresolvedReferences
-    class ModuleProxy(types.ModuleType):
+    class ModuleProxy(types.ModuleType, Proxy):
         pass
 
     try:
         # Subclassing from obj to pass isinstance(some_object, obj) checks. If defining the class fails, it means that
         # `obj` was not a class, that means ClassProxy wouldn't be used, we can create a dummy class.
-        class ClassProxy(obj):
+        class ClassProxy(obj, Proxy):
             @staticmethod
             def __new__(cls, *args, **kwargs):
                 # noinspection PyUnresolvedReferences
@@ -128,10 +132,10 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                               wrapped_name_func=wrapped_name_func)
                 return result
     except TypeError:
-        class ClassProxy:
+        class ClassProxy(Proxy):
             pass
 
-    class ObjectProxy:
+    class ObjectProxy(Proxy):
         pass
 
     # noinspection PyShadowingNames
@@ -215,7 +219,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         elif is_magic:
             @wraps(obj)
             def result(*args, **kwargs):
-                if len(args) > 0 and isinstance(args[0], ClassProxy):
+                if len(args) > 0 and isinstance(args[0], Proxy):
                     # noinspection PyProtectedMember
                     args = (object.__getattribute__(args[0], '_original_obj'), ) + args[1:]
                 return obj(*args, **kwargs)
