@@ -184,7 +184,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
 
         def set_original_obj():
             with suppress(AttributeError):
-                what = type if obj_type in [ObjectType.MODULE, ObjectType.CLASS] else object
+                what = type if obj_type == ObjectType.CLASS else object
                 what.__setattr__(wrapped_obj, wrapped_name_func(obj), obj)
 
         obj_type = get_obj_type()
