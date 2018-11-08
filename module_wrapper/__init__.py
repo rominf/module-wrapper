@@ -254,25 +254,46 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         return result
 
     def function_or_method_wrapper():
-        is_magic = obj.__name__.startswith('__') and obj.__name__.endswith('__')
+        # noinspection PyShadowingNames
+        def is_magic_name(name):
+            return name.startswith('__') and name.endswith('__')
+
+        # noinspection PyShadowingNames
+        def is_magic(obj):
+            return is_magic_name(name=obj.__name__)
+
+        # noinspection PyShadowingNames
+        @wraps(obj)
+        def wrapped_obj(*args, **kwargs):
+            return wrapper(obj)(*args, **kwargs)
+
+        @wraps(obj)
+        def obj_with_original_obj_as_self(*args, **kwargs):
+            if len(args) > 0 and isinstance(args[0], Proxy):
+                # noinspection PyProtectedMember
+                args = (object.__getattribute__(args[0], '_original_obj'), ) + args[1:]
+            return obj(*args, **kwargs)
 
         if wrapper is None:
             result = obj
-        elif is_magic:
-            @wraps(obj)
-            def result(*args, **kwargs):
-                if len(args) > 0 and isinstance(args[0], Proxy):
-                    # noinspection PyProtectedMember
-                    args = (object.__getattribute__(args[0], '_original_obj'), ) + args[1:]
-                return obj(*args, **kwargs)
+        elif is_magic(obj=obj):
+            if obj.__name__ == '__getattribute__':
+                @wraps(obj)
+                def result(*args, **kwargs):
+                    # If we are trying to access magic attribute, call obj with args[0]._original_obj as self,
+                    # else call wrapper.
+                    if is_magic_name(name=args[1]):
+                        return obj_with_original_obj_as_self(*args, **kwargs)
+                    else:
+                        return obj(*args, **kwargs)
+            else:
+                result = obj_with_original_obj_as_self
         elif obj.__name__ == '__getattr__':
             @wraps(obj)
             def result(*args, **kwargs):
                 return wrapper(obj(*args, **kwargs))
         else:
-            @wraps(obj)
-            def result(*args, **kwargs):
-                return wrapper(obj)(*args, **kwargs)
+            result = wrapped_obj
         if wrap_return_values:
             @wraps(obj)
             def result_(*args, **kwargs):
