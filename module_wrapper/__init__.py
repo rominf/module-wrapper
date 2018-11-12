@@ -194,7 +194,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             elif obj_type == ObjectType.FUNCTION_OR_METHOD:
                 wrapped_obj = function_or_method_wrapper()
             elif obj_type == ObjectType.COROUTINE:
-                wrapped_obj = coroutine_wrapper
+                wrapped_obj = coroutine_wrapper()
             else:
                 wrapped_obj = create_proxy(proxy_type=ProxyType.OBJECT)
         key = (obj, wrapper, name)
