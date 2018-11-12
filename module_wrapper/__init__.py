@@ -253,6 +253,20 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                           wrapped_name_func=wrapped_name_func)
         return result
 
+    # noinspection PyShadowingNames
+    def call_and_wrap_return_values(obj, is_coroutine_function):
+        if is_coroutine_function:
+            # noinspection PyShadowingNames
+            @wraps(obj)
+            async def wrapper(*args, **kwargs):
+                return wrap_return_values_(result=obj(*args, **kwargs))
+        else:
+            # noinspection PyShadowingNames
+            @wraps(obj)
+            def wrapper(*args, **kwargs):
+                return wrap_return_values_(result=obj(*args, **kwargs))
+        return wrapper
+
     def function_or_method_wrapper():
         # noinspection PyShadowingNames
         def is_magic_name(name):
@@ -295,11 +309,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         else:
             result = wrapped_obj
         if wrap_return_values:
-            @wraps(obj)
-            def result_(*args, **kwargs):
-                return wrap_return_values_(result=result(*args, **kwargs))
-            result = result_
-
+            is_coroutine_function = inspect.iscoroutinefunction(object=wrapper(obj))
+            result = call_and_wrap_return_values(obj=result, is_coroutine_function=is_coroutine_function)
         return result
 
     def coroutine_wrapper():
@@ -308,11 +319,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             return await wrapper(obj)(*args, **kwargs)
 
         if wrap_return_values:
-            @wraps(obj)
-            async def result_(*args, **kwargs):
-                return wrap_return_values_(result=await result(*args, **kwargs))
-            result = result_
-
+            is_coroutine_function = inspect.iscoroutinefunction(object=wrapper(obj))
+            result = call_and_wrap_return_values(obj=result, is_coroutine_function=is_coroutine_function)
         return result
 
     def is_in_skip():
