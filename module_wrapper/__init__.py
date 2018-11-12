@@ -259,7 +259,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             # noinspection PyShadowingNames
             @wraps(obj)
             async def wrapper(*args, **kwargs):
-                return wrap_return_values_(result=obj(*args, **kwargs))
+                return wrap_return_values_(result=await obj(*args, **kwargs))
         else:
             # noinspection PyShadowingNames
             @wraps(obj)
