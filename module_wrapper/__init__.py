@@ -142,13 +142,16 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
 
     # noinspection PyShadowingNames
     def get_name(*names):
+        name = None
         for obj in names:
             try:
                 name = obj.__name__
             except AttributeError:
-                name = obj
-            if name:
+                if isinstance(obj, str):
+                    name = obj
+            if name is not None:
                 return name
+        return name
 
     # noinspection PyShadowingNames
     def _wrap(obj, name, members, wrapped_obj=None):
