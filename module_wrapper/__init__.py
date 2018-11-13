@@ -160,7 +160,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 wrapped_name_func)
 
     # noinspection PyShadowingNames
-    def _wrap(obj, name, members, wrapped_obj=None):
+    def wrap_(obj, name, members, wrapped_obj=None):
         def get_obj_type():
             if inspect.ismodule(object=obj):
                 result = ObjectType.MODULE
@@ -250,7 +250,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             class_members = []
             with suppress(ModuleNotFoundError):
                 class_members = getmembers(object=obj.__class__)
-            _ = _wrap(obj=obj.__class__,
+            _ = wrap_(obj=obj.__class__,
                       name=wrapped_class_name,
                       members=class_members,
                       wrapped_obj=wrapped_obj.__class__)
@@ -430,7 +430,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     elif already_wrapped:
         wrapped_obj = _wrapped_objs[key]
     elif members:
-        wrapped_obj = _wrap(obj=obj, name=name, members=members)
+        wrapped_obj = wrap_(obj=obj, name=name, members=members)
     else:
         wrapped_obj = obj
         _wrapped_objs[key] = wrapped_obj
