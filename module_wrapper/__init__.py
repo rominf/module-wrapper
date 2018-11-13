@@ -418,7 +418,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                    wrapped_name_func=wrapped_name_func)
 
     wrap_filenames = wrap_filenames or get_obj_library_files()
-    filename = filename or get_obj_file(obj=obj)
+    filename = get_obj_file(obj=obj) or filename
 
     # noinspection PyUnusedLocal
     members = []
