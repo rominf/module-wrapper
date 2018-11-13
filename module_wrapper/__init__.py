@@ -88,7 +88,7 @@ def getmembers(object, predicate=None):
 
 
 def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, wrap_filenames=(),
-         filename=None, wrapped_name_func=None):
+         filename=None, wrapped_name_func=None, wrapped_obj=None):
     """
     Wrap module, class, function or another variable recursively
 
@@ -106,6 +106,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     :param Optional[str] filename: Source file of `obj`
     :param Optional[Callable[Any, str]] wrapped_name_func: Function that accepts `obj` as argument and returns the \
     name of wrapped `obj` that will be written into wrapped `obj`
+    :param Any wrapped_obj: Object to wrap to
     :return: Wrapped `obj`
     """
     # noinspection PyUnresolvedReferences
@@ -246,14 +247,17 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                         setattr(wrapped_obj, attr_name, attr_value_new)
         if obj_type == ObjectType.OBJECT:
             wrapped_class_name = get_name(obj.__class__)
-            # noinspection PyUnusedLocal
-            class_members = []
-            with suppress(ModuleNotFoundError):
-                class_members = getmembers(object=obj.__class__)
-            _ = wrap_(obj=obj.__class__,
-                      name=wrapped_class_name,
-                      members=class_members,
-                      wrapped_obj=wrapped_obj.__class__)
+            # noinspection PyArgumentList
+            _ = wrap(obj=obj.__class__,
+                     wrapper=wrapper,
+                     methods_to_add=methods_to_add,
+                     name=wrapped_class_name,
+                     skip=skip,
+                     wrap_return_values=wrap_return_values,
+                     wrap_filenames=wrap_filenames,
+                     filename=get_obj_file(obj=obj.__class__) or filename,
+                     wrapped_name_func=wrapped_name_func,
+                     wrapped_obj=wrapped_obj.__class__)
         return wrapped_obj
 
     def wrap_return_values_(result):
@@ -430,7 +434,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     elif already_wrapped:
         wrapped_obj = _wrapped_objs[key]
     elif members:
-        wrapped_obj = wrap_(obj=obj, name=name, members=members)
+        wrapped_obj = wrap_(obj=obj, name=name, members=members, wrapped_obj=wrapped_obj)
     else:
         wrapped_obj = obj
         _wrapped_objs[key] = wrapped_obj
