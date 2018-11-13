@@ -215,8 +215,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                        wrap_filenames=wrap_filenames,
                        filename=filename,
                        wrapped_name_func=wrapped_name_func)
-        with suppress(TypeError):
-            _wrapped_objs[key] = wrapped_obj
+        _wrapped_objs[key] = wrapped_obj
         set_original_obj()
         if obj_type in [ObjectType.FUNCTION_OR_METHOD, ObjectType.COROUTINE]:
             return wrapped_obj
@@ -387,7 +386,12 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             result = [str(obj_file) for obj_file in result]
         else:
             result = []
+        result = frozenset(result)
         return result
+
+    methods_to_add = frozenset(methods_to_add)
+    skip = frozenset(skip)
+    wrap_filenames = frozenset(wrap_filenames)
 
     if wrapped_name_func is None:
         # noinspection PyShadowingNames
