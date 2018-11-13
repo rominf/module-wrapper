@@ -154,6 +154,12 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         return name
 
     # noinspection PyShadowingNames
+    def make_key(obj, wrapper, methods_to_add, name, skip, wrap_return_values, wrap_filenames, filename,
+                 wrapped_name_func):
+        return (id(obj), wrapper, methods_to_add, name, skip, wrap_return_values, wrap_filenames, filename,
+                wrapped_name_func)
+
+    # noinspection PyShadowingNames
     def _wrap(obj, name, members, wrapped_obj=None):
         def get_obj_type():
             if inspect.ismodule(object=obj):
@@ -200,7 +206,15 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 wrapped_obj = coroutine_wrapper()
             else:
                 wrapped_obj = create_proxy(proxy_type=ProxyType.OBJECT)
-        key = (obj, wrapper, name)
+        key = make_key(obj=obj,
+                       wrapper=wrapper,
+                       methods_to_add=methods_to_add,
+                       name=name,
+                       skip=skip,
+                       wrap_return_values=wrap_return_values,
+                       wrap_filenames=wrap_filenames,
+                       filename=filename,
+                       wrapped_name_func=wrapped_name_func)
         with suppress(TypeError):
             _wrapped_objs[key] = wrapped_obj
         set_original_obj()
@@ -385,7 +399,15 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     if name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
-    key = (obj, wrapper, name)
+    key = make_key(obj=obj,
+                   wrapper=wrapper,
+                   methods_to_add=methods_to_add,
+                   name=name,
+                   skip=skip,
+                   wrap_return_values=wrap_return_values,
+                   wrap_filenames=wrap_filenames,
+                   filename=filename,
+                   wrapped_name_func=wrapped_name_func)
 
     wrap_filenames = wrap_filenames or get_obj_library_files()
     filename = filename or get_obj_file(obj=obj)
