@@ -257,8 +257,20 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         return result
 
     # noinspection PyShadowingNames
-    def call_and_wrap_return_values(obj, is_coroutine_function):
-        if is_coroutine_function:
+    def is_magic_name(name):
+        return name.startswith('__') and name.endswith('__')
+
+    # noinspection PyShadowingNames
+    def is_magic(obj):
+        return is_magic_name(name=obj.__name__)
+
+    # noinspection PyShadowingNames
+    def is_coroutine_function(obj, wrapper):
+        return inspect.iscoroutinefunction(object=wrapper(obj)) and not is_magic(obj=obj)
+
+    # noinspection PyShadowingNames
+    def wrap_call_and_wrap_return_values(obj, wrapper):
+        if is_coroutine_function(obj=obj, wrapper=wrapper):
             # noinspection PyShadowingNames
             @wraps(obj)
             async def wrapper(*args, **kwargs):
@@ -271,14 +283,6 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         return wrapper
 
     def function_or_method_wrapper():
-        # noinspection PyShadowingNames
-        def is_magic_name(name):
-            return name.startswith('__') and name.endswith('__')
-
-        # noinspection PyShadowingNames
-        def is_magic(obj):
-            return is_magic_name(name=obj.__name__)
-
         # noinspection PyShadowingNames
         @wraps(obj)
         def wrapped_obj(*args, **kwargs):
@@ -312,8 +316,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         else:
             result = wrapped_obj
         if wrap_return_values:
-            is_coroutine_function = inspect.iscoroutinefunction(object=wrapper(obj))
-            result = call_and_wrap_return_values(obj=result, is_coroutine_function=is_coroutine_function)
+            result = wrap_call_and_wrap_return_values(obj=result, wrapper=wrapper)
         return result
 
     def coroutine_wrapper():
@@ -322,8 +325,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             return await wrapper(obj)(*args, **kwargs)
 
         if wrap_return_values:
-            is_coroutine_function = inspect.iscoroutinefunction(object=wrapper(obj))
-            result = call_and_wrap_return_values(obj=result, is_coroutine_function=is_coroutine_function)
+            result = wrap_call_and_wrap_return_values(obj=result, wrapper=wrapper)
         return result
 
     def is_in_skip():
