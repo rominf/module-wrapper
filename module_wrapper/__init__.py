@@ -157,8 +157,12 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     # noinspection PyShadowingNames
     def make_key(obj, wrapper, methods_to_add, name, skip, wrap_return_values, wrap_filenames, filename,
                  wrapped_name_func):
-        return (id(obj), wrapper, methods_to_add, name, skip, wrap_return_values, wrap_filenames, filename,
-                wrapped_name_func)
+        try:
+            obj_key = 'hash', hash(obj)
+        except TypeError:
+            obj_key = 'id', id(obj)
+        return obj_key + (wrapper, methods_to_add, name, skip, wrap_return_values, wrap_filenames, filename,
+                          wrapped_name_func)
 
     # noinspection PyShadowingNames
     def wrap_(obj, name, members, wrapped_obj=None):
