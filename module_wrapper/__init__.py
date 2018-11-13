@@ -201,7 +201,8 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
             else:
                 wrapped_obj = create_proxy(proxy_type=ProxyType.OBJECT)
         key = (obj, wrapper, name)
-        _wrapped_objs[key] = wrapped_obj
+        with suppress(TypeError):
+            _wrapped_objs[key] = wrapped_obj
         set_original_obj()
         if obj_type in [ObjectType.FUNCTION_OR_METHOD, ObjectType.COROUTINE]:
             return wrapped_obj
@@ -394,9 +395,13 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     with suppress(ModuleNotFoundError):
         members = getmembers(object=obj)
 
+    try:
+        already_wrapped = key in _wrapped_objs
+    except TypeError:
+        already_wrapped = False
     if filename not in wrap_filenames or is_in_skip():
         wrapped_obj = obj
-    elif key in _wrapped_objs:
+    elif already_wrapped:
         wrapped_obj = _wrapped_objs[key]
     elif members:
         wrapped_obj = _wrap(obj=obj, name=name, members=members)
