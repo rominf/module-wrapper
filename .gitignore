@@ -3,6 +3,8 @@ docs/_build
 docs/_static
 docs/_templates
 
+profile/
+
 # Created by https://www.gitignore.io/api/python,pycharm
 
 ### PyCharm ###
