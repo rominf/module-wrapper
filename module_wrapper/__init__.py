@@ -88,7 +88,7 @@ def getmembers(object, predicate=None):
 
 
 def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, wrap_filenames=(),
-         filename=None, wrapped_name_func=None, wrapped_obj=None):
+         filename=None, wrapped_name_func=None, wrapped=None):
     """
     Wrap module, class, function or another variable recursively
 
@@ -106,7 +106,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     :param Optional[str] filename: Source file of `obj`
     :param Optional[Callable[Any, str]] wrapped_name_func: Function that accepts `obj` as argument and returns the \
     name of wrapped `obj` that will be written into wrapped `obj`
-    :param Any wrapped_obj: Object to wrap to
+    :param Any wrapped: Object to wrap to
     :return: Wrapped `obj`
     """
     # noinspection PyUnresolvedReferences
@@ -165,7 +165,7 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                           wrapped_name_func)
 
     # noinspection PyShadowingNames
-    def wrap_(obj, name, members, wrapped_obj=None):
+    def wrap_(obj, name, members, wrapped=None):
         def get_obj_type():
             if inspect.ismodule(object=obj):
                 result = ObjectType.MODULE
@@ -192,25 +192,28 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
 
         def add_methods():
             for method_to_add in methods_to_add:
-                method_name, method = method_to_add(wrapped_obj)
+                method_name, method = method_to_add(wrapped)
                 if method is not None:
-                    setattr(wrapped_obj, method_name, method)
+                    setattr(wrapped, method_name, method)
 
         def set_original_obj():
             with suppress(AttributeError):
                 what = type if obj_type == ObjectType.CLASS else object
-                what.__setattr__(wrapped_obj, wrapped_name_func(obj), obj)
+                what.__setattr__(wrapped, wrapped_name_func(obj), obj)
+
+        def need_to_wrap():
+            return is_magic_name(name=attr_name) and attr_name not in ['__class__', '__new__']
 
         obj_type = get_obj_type()
-        if wrapped_obj is None:
+        if wrapped is None:
             if obj_type in [ObjectType.MODULE, ObjectType.CLASS]:
-                wrapped_obj = create_proxy(proxy_type=ProxyType.MODULE if inspect.ismodule(obj) else ProxyType.CLASS)
+                wrapped = create_proxy(proxy_type=ProxyType.MODULE if inspect.ismodule(obj) else ProxyType.CLASS)
             elif obj_type == ObjectType.FUNCTION_OR_METHOD:
-                wrapped_obj = function_or_method_wrapper()
+                wrapped = function_or_method_wrapper()
             elif obj_type == ObjectType.COROUTINE:
-                wrapped_obj = coroutine_wrapper()
+                wrapped = coroutine_wrapper()
             else:
-                wrapped_obj = create_proxy(proxy_type=ProxyType.OBJECT)
+                wrapped = create_proxy(proxy_type=ProxyType.OBJECT)
         key = make_key(obj=obj,
                        wrapper=wrapper,
                        methods_to_add=methods_to_add,
@@ -220,49 +223,50 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                        wrap_filenames=wrap_filenames,
                        filename=filename,
                        wrapped_name_func=wrapped_name_func)
-        _wrapped_objs[key] = wrapped_obj
+        _wrapped_objs[key] = wrapped
         set_original_obj()
         if obj_type in [ObjectType.FUNCTION_OR_METHOD, ObjectType.COROUTINE]:
-            return wrapped_obj
+            return wrapped
         add_methods()
-        for attr_name, attr_value in members:
-            if attr_name not in ['__class__', '__new__']:
-                raises_exception = (isinstance(attr_value, tuple) and
-                                    len(attr_value) > 0 and
-                                    attr_value[0] == RAISES_EXCEPTION)
-                if raises_exception and not obj_type == ObjectType.MODULE:
-                    def raise_exception(self):
-                        _ = self
-                        raise attr_value[1]
-
-                    attr_value = property(raise_exception)
-                with suppress(AttributeError, TypeError):
-                    # noinspection PyArgumentList
-                    attr_value_new = wrap(obj=attr_value,
-                                          wrapper=wrapper,
-                                          methods_to_add=methods_to_add,
-                                          name=get_name(attr_value, attr_name),
-                                          skip=skip,
-                                          wrap_return_values=wrap_return_values,
-                                          wrap_filenames=wrap_filenames,
-                                          filename=get_obj_file(obj=attr_value) or filename,
-                                          wrapped_name_func=wrapped_name_func)
-                    with suppress(Exception):
-                        setattr(wrapped_obj, attr_name, attr_value_new)
-        if obj_type == ObjectType.OBJECT:
+        if obj_type == ObjectType.CLASS:
+            for attr_name, attr_value in members:
+                if need_to_wrap():
+                    raises_exception = (isinstance(attr_value, tuple) and
+                                        len(attr_value) > 0 and
+                                        attr_value[0] == RAISES_EXCEPTION)
+                    if raises_exception and not obj_type == ObjectType.MODULE:
+                        def raise_exception(self):
+                            _ = self
+                            raise attr_value[1]
+                        attr_value = property(raise_exception)
+                    with suppress(AttributeError, TypeError):
+                        # noinspection PyArgumentList
+                        attr_value_new = wrap(obj=attr_value,
+                                              wrapper=wrapper,
+                                              methods_to_add=methods_to_add,
+                                              name=get_name(attr_value, attr_name),
+                                              skip=skip,
+                                              wrap_return_values=wrap_return_values,
+                                              wrap_filenames=wrap_filenames,
+                                              filename=get_obj_file(obj=attr_value) or filename,
+                                              wrapped_name_func=wrapped_name_func)
+                        with suppress(Exception):
+                            type.__setattr__(wrapped, attr_name, attr_value_new)
+        if obj_type != ObjectType.CLASS:
             wrapped_class_name = get_name(obj.__class__)
             # noinspection PyArgumentList
-            _ = wrap(obj=obj.__class__,
-                     wrapper=wrapper,
-                     methods_to_add=methods_to_add,
-                     name=wrapped_class_name,
-                     skip=skip,
-                     wrap_return_values=wrap_return_values,
-                     wrap_filenames=wrap_filenames,
-                     filename=get_obj_file(obj=obj.__class__) or filename,
-                     wrapped_name_func=wrapped_name_func,
-                     wrapped_obj=wrapped_obj.__class__)
-        return wrapped_obj
+            wrapped_class = wrap(obj=obj.__class__,
+                                 wrapper=wrapper,
+                                 methods_to_add=methods_to_add,
+                                 name=wrapped_class_name,
+                                 skip=skip,
+                                 wrap_return_values=wrap_return_values,
+                                 wrap_filenames=wrap_filenames,
+                                 filename=get_obj_file(obj=obj.__class__) or filename,
+                                 wrapped_name_func=wrapped_name_func,
+                                 wrapped=wrapped.__class__)
+            object.__setattr__(wrapped, '__class__', wrapped_class)
+        return wrapped
 
     def wrap_return_values_(result):
         if wrap_return_values:
@@ -324,11 +328,23 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 @wraps(obj)
                 def result(*args, **kwargs):
                     # If we are trying to access magic attribute, call obj with args[0]._original_obj as self,
-                    # else call wrapper.
-                    if is_magic_name(name=args[1]):
-                        return obj_with_original_obj_as_self(*args, **kwargs)
+                    # else call original __getattribute__ and wrap the result before returning it.
+                    # noinspection PyShadowingNames
+                    name = args[1]
+                    attr_value = obj_with_original_obj_as_self(*args, **kwargs)
+                    if is_magic_name(name=name):
+                        return attr_value
                     else:
-                        return obj(*args, **kwargs)
+                        # noinspection PyShadowingNames,PyArgumentList
+                        return wrap(obj=attr_value,
+                                    wrapper=wrapper,
+                                    methods_to_add=methods_to_add,
+                                    name=name,
+                                    skip=skip,
+                                    wrap_return_values=wrap_return_values,
+                                    wrap_filenames=wrap_filenames,
+                                    filename=filename,
+                                    wrapped_name_func=wrapped_name_func)
             else:
                 result = obj_with_original_obj_as_self
         elif obj.__name__ == '__getattr__':
@@ -434,13 +450,13 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     except TypeError:
         already_wrapped = False
     if filename not in wrap_filenames or is_in_skip():
-        wrapped_obj = obj
+        wrapped = obj
     elif already_wrapped:
-        wrapped_obj = _wrapped_objs[key]
+        wrapped = _wrapped_objs[key]
     elif members:
-        wrapped_obj = wrap_(obj=obj, name=name, members=members, wrapped_obj=wrapped_obj)
+        wrapped = wrap_(obj=obj, name=name, members=members, wrapped=wrapped)
     else:
-        wrapped_obj = obj
-        _wrapped_objs[key] = wrapped_obj
+        wrapped = obj
+        _wrapped_objs[key] = wrapped
 
-    return wrapped_obj
+    return wrapped
