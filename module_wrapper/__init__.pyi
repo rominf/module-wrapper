@@ -6,5 +6,6 @@ def wrap(obj: Any,
          methods_to_add: Collection[Callable[[Callable], Tuple[str, Callable]]] = (),
          name: str = None,
          skip: Collection[str] = (),
-         wrap_return_values: bool = False) -> Any:
+         wrap_return_values: bool = False,
+         clear_cache: bool = True) -> Any:
     ...

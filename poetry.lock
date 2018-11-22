@@ -4,10 +4,10 @@ description = "Python library for extracting version from poetry pyproject.toml 
 name = "poetry-version"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.1.1"
+version = "0.1.2"
 
 [package.dependencies]
-tomlkit = ">=0.4.6,<0.5.0"
+tomlkit = ">=0.4.6,<0.6.0"
 
 [[package]]
 category = "main"
@@ -15,12 +15,12 @@ description = "Style preserving TOML library"
 name = "tomlkit"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.4.6"
+version = "0.5.3"
 
 [metadata]
 content-hash = "5a7187652a513c0e62396ab758894d2f19c704046247b12bb44cb4090db97da2"
 python-versions = "^3.5"
 
 [metadata.hashes]
-poetry-version = ["677aed9721ce58acaa9af2b799736256256e4b4baa272e805525a75b6a8e9a36", "a8ca5e13c3381c034923049e7346df4b37962f70495be427622190fbaf7c8f3f"]
-tomlkit = ["27ddd2796855428a0316057884ec081a1c967c8d29c3d489fcfccd1bb2976ede", "8f857398aefa2c6a488c824f1e7f757e73a4f68246f1874f9df5eb53903231de"]
+poetry-version = ["746c16322b612e214036ec1a259bd221f52d8fc214787441e5ca7d0564187222", "7d67345e3dd657f1364ad9cb187025a78439c012b2699370b5ad043c73ebf003"]
+tomlkit = ["d6506342615d051bc961f70bfcfa3d29b6616cc08a3ddfd4bc24196f16fd4ec2", "f077456d35303e7908cc233b340f71e0bec96f63429997f38ca9272b7d64029e"]

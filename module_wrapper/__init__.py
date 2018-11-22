@@ -87,8 +87,8 @@ def getmembers(object, predicate=None):
     return results
 
 
-def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, wrap_filenames=(),
-         filename=None, wrapped_name_func=None, wrapped=None):
+def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, wrap_filenames=(),
+          filename=None, wrapped_name_func=None, wrapped=None):
     """
     Wrap module, class, function or another variable recursively
 
@@ -124,15 +124,15 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                 # noinspection PyUnresolvedReferences
                 original_obj_object = cls._original_obj(*args, **kwargs)
                 # noinspection PyArgumentList
-                result = wrap(obj=original_obj_object,
-                              wrapper=wrapper,
-                              methods_to_add=methods_to_add,
-                              name=name,
-                              skip=skip,
-                              wrap_return_values=wrap_return_values,
-                              wrap_filenames=wrap_filenames,
-                              filename=filename,
-                              wrapped_name_func=wrapped_name_func)
+                result = _wrap(obj=original_obj_object,
+                               wrapper=wrapper,
+                               methods_to_add=methods_to_add,
+                               name=name,
+                               skip=skip,
+                               wrap_return_values=wrap_return_values,
+                               wrap_filenames=wrap_filenames,
+                               filename=filename,
+                               wrapped_name_func=wrapped_name_func)
                 return result
     except TypeError:
         class ClassProxy(Proxy):
@@ -241,45 +241,45 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                         attr_value = property(raise_exception)
                     with suppress(AttributeError, TypeError):
                         # noinspection PyArgumentList
-                        attr_value_new = wrap(obj=attr_value,
-                                              wrapper=wrapper,
-                                              methods_to_add=methods_to_add,
-                                              name=get_name(attr_value, attr_name),
-                                              skip=skip,
-                                              wrap_return_values=wrap_return_values,
-                                              wrap_filenames=wrap_filenames,
-                                              filename=get_obj_file(obj=attr_value) or filename,
-                                              wrapped_name_func=wrapped_name_func)
+                        attr_value_new = _wrap(obj=attr_value,
+                                               wrapper=wrapper,
+                                               methods_to_add=methods_to_add,
+                                               name=get_name(attr_value, attr_name),
+                                               skip=skip,
+                                               wrap_return_values=wrap_return_values,
+                                               wrap_filenames=wrap_filenames,
+                                               filename=get_obj_file(obj=attr_value) or filename,
+                                               wrapped_name_func=wrapped_name_func)
                         with suppress(Exception):
                             type.__setattr__(wrapped, attr_name, attr_value_new)
         if obj_type != ObjectType.CLASS:
             wrapped_class_name = get_name(obj.__class__)
             # noinspection PyArgumentList
-            wrapped_class = wrap(obj=obj.__class__,
-                                 wrapper=wrapper,
-                                 methods_to_add=methods_to_add,
-                                 name=wrapped_class_name,
-                                 skip=skip,
-                                 wrap_return_values=wrap_return_values,
-                                 wrap_filenames=wrap_filenames,
-                                 filename=get_obj_file(obj=obj.__class__) or filename,
-                                 wrapped_name_func=wrapped_name_func,
-                                 wrapped=wrapped.__class__)
+            wrapped_class = _wrap(obj=obj.__class__,
+                                  wrapper=wrapper,
+                                  methods_to_add=methods_to_add,
+                                  name=wrapped_class_name,
+                                  skip=skip,
+                                  wrap_return_values=wrap_return_values,
+                                  wrap_filenames=wrap_filenames,
+                                  filename=get_obj_file(obj=obj.__class__) or filename,
+                                  wrapped_name_func=wrapped_name_func,
+                                  wrapped=wrapped.__class__)
             object.__setattr__(wrapped, '__class__', wrapped_class)
         return wrapped
 
     def wrap_return_values_(result):
         if wrap_return_values:
             # noinspection PyArgumentList
-            result = wrap(obj=result,
-                          wrapper=wrapper,
-                          methods_to_add=methods_to_add,
-                          name=get_name(result, 'result'),
-                          skip=skip,
-                          wrap_return_values=wrap_return_values,
-                          wrap_filenames=wrap_filenames,
-                          filename=filename,
-                          wrapped_name_func=wrapped_name_func)
+            result = _wrap(obj=result,
+                           wrapper=wrapper,
+                           methods_to_add=methods_to_add,
+                           name=get_name(result, 'result'),
+                           skip=skip,
+                           wrap_return_values=wrap_return_values,
+                           wrap_filenames=wrap_filenames,
+                           filename=filename,
+                           wrapped_name_func=wrapped_name_func)
         return result
 
     # noinspection PyShadowingNames
@@ -336,15 +336,15 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
                         return attr_value
                     else:
                         # noinspection PyShadowingNames,PyArgumentList
-                        return wrap(obj=attr_value,
-                                    wrapper=wrapper,
-                                    methods_to_add=methods_to_add,
-                                    name=name,
-                                    skip=skip,
-                                    wrap_return_values=wrap_return_values,
-                                    wrap_filenames=wrap_filenames,
-                                    filename=filename,
-                                    wrapped_name_func=wrapped_name_func)
+                        return _wrap(obj=attr_value,
+                                     wrapper=wrapper,
+                                     methods_to_add=methods_to_add,
+                                     name=name,
+                                     skip=skip,
+                                     wrap_return_values=wrap_return_values,
+                                     wrap_filenames=wrap_filenames,
+                                     filename=filename,
+                                     wrapped_name_func=wrapped_name_func)
             else:
                 result = obj_with_original_obj_as_self
         elif obj.__name__ == '__getattr__':
@@ -460,3 +460,31 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
         _wrapped_objs[key] = wrapped
 
     return wrapped
+
+
+def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, clear_cache=True):
+    """
+    Wrap module, class, function or another variable recursively
+
+    :param Any obj: Object to wrap recursively
+    :param Optional[Callable] wrapper: Wrapper to wrap functions and methods in (accepts function as argument)
+    :param Collection[Callable] methods_to_add: Container of functions, which accept class as argument, and return \
+    tuple of method name and method to add to all classes
+    :param Optional[str] name: Name of module to wrap to (if `obj` is module)
+    :param Collection[Union[str, type, Any]] skip: Items to skip wrapping (if an item of a collection is the str, wrap \
+    will check the obj name, if an item of a collection is the type, wrap will check the obj type, else wrap will \
+    check an item itself)
+    :param bool wrap_return_values: If try, wrap return values of callables (only types, supported by wrap function \
+    are supported)
+    :param bool clear_cache: Clear wrapped objects cache after wrapping
+    :return: Wrapped `obj`
+    """
+    result = _wrap(obj=obj,
+                   wrapper=wrapper,
+                   methods_to_add=methods_to_add,
+                   name=name,
+                   skip=skip,
+                   wrap_return_values=wrap_return_values)
+    if clear_cache:
+        _wrapped_objs.clear()
+    return result
