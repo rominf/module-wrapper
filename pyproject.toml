@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "module-wrapper"
-version = "0.2.3"
+version = "0.3.0"
 description = "Module wrapper Python library"
 authors = ["Roman Inflianskas <infroma@gmail.com>"]
 license = "Apache-2.0"
@@ -12,8 +12,8 @@ classifiers = [
 repository = "https://github.com/rominf/module-wrapper"
 
 [tool.poetry.dependencies]
-python = "^3.5"
-poetry-version = "^0.1.1"
+python = "^3.6"
+stdlib_list = "^0.8.0"
 
 [tool.poetry.dev-dependencies]
 

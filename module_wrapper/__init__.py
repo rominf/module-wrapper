@@ -1,16 +1,18 @@
 from contextlib import suppress
 from enum import IntEnum
 from functools import wraps
-from pathlib import Path
 import inspect
-import sys
+import re
+import stdlib_list
 import types
-
-import poetry_version
 
 
 __all__ = ['wrap', '__version__']
-__version__ = poetry_version.extract(source_file=__file__)
+__version__ = "0.3.0"
+
+
+STDLIB_MODULE_NAMES = stdlib_list.stdlib_list()
+STDLIB_MODULE_NAMES_REGEX = f"({'|'.join(re.escape(stdlib_module_name) for stdlib_module_name in STDLIB_MODULE_NAMES)})"
 _wrapped_objs = {}
 
 
@@ -87,8 +89,17 @@ def getmembers(object, predicate=None):
     return results
 
 
-def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, wrap_filenames=(),
-          filename=None, wrapped_name_func=None, wrapped=None):
+def _wrap(
+        obj,
+        wrapper=None,
+        methods_to_add=(),
+        name=None,
+        skip=(),
+        wrap_return_values=False,
+        wrapped_name_func=None,
+        wrapped=None,
+        wrapping_scope_regex=None,
+):
     """
     Wrap module, class, function or another variable recursively
 
@@ -102,11 +113,10 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
     check an item itself)
     :param bool wrap_return_values: If try, wrap return values of callables (only types, supported by wrap function \
     are supported)
-    :param Collection[str] wrap_filenames: Files to wrap
-    :param Optional[str] filename: Source file of `obj`
     :param Optional[Callable[Any, str]] wrapped_name_func: Function that accepts `obj` as argument and returns the \
     name of wrapped `obj` that will be written into wrapped `obj`
     :param Any wrapped: Object to wrap to
+    :param Optional[str] wrapping_scope_regex: regex for module names that should be wrapped
     :return: Wrapped `obj`
     """
     # noinspection PyUnresolvedReferences
@@ -130,9 +140,8 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                                name=name,
                                skip=skip,
                                wrap_return_values=wrap_return_values,
-                               wrap_filenames=wrap_filenames,
-                               filename=filename,
-                               wrapped_name_func=wrapped_name_func)
+                               wrapped_name_func=wrapped_name_func,
+                               wrapping_scope_regex=wrapping_scope_regex)
                 return result
     except TypeError:
         class ClassProxy(Proxy):
@@ -155,14 +164,20 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
         return name
 
     # noinspection PyShadowingNames
-    def make_key(obj, wrapper, methods_to_add, name, skip, wrap_return_values, wrap_filenames, filename,
-                 wrapped_name_func):
+    def make_key(obj, wrapper, methods_to_add, name, skip, wrap_return_values, wrapped_name_func, wrapping_scope_regex):
         try:
             obj_key = 'hash', hash(obj)
         except TypeError:
             obj_key = 'id', id(obj)
-        return obj_key + (wrapper, methods_to_add, name, skip, wrap_return_values, wrap_filenames, filename,
-                          wrapped_name_func)
+        return obj_key + (
+            wrapper,
+            methods_to_add,
+            name,
+            skip,
+            wrap_return_values,
+            wrapped_name_func,
+            wrapping_scope_regex,
+        )
 
     # noinspection PyShadowingNames
     def wrap_(obj, name, members, wrapped=None):
@@ -202,7 +217,7 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                 what.__setattr__(wrapped, wrapped_name_func(obj), obj)
 
         def need_to_wrap():
-            return is_magic_name(name=attr_name) and attr_name not in ['__class__', '__new__']
+            return not is_magic_name(name=attr_name) or attr_name not in ['__class__', '__new__']
 
         obj_type = get_obj_type()
         if wrapped is None:
@@ -214,21 +229,22 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                 wrapped = coroutine_wrapper()
             else:
                 wrapped = create_proxy(proxy_type=ProxyType.OBJECT)
-        key = make_key(obj=obj,
-                       wrapper=wrapper,
-                       methods_to_add=methods_to_add,
-                       name=name,
-                       skip=skip,
-                       wrap_return_values=wrap_return_values,
-                       wrap_filenames=wrap_filenames,
-                       filename=filename,
-                       wrapped_name_func=wrapped_name_func)
+        key = make_key(
+            obj=obj,
+            wrapper=wrapper,
+            methods_to_add=methods_to_add,
+            name=name,
+            skip=skip,
+            wrap_return_values=wrap_return_values,
+            wrapped_name_func=wrapped_name_func,
+            wrapping_scope_regex=wrapping_scope_regex,
+        )
         _wrapped_objs[key] = wrapped
         set_original_obj()
         if obj_type in [ObjectType.FUNCTION_OR_METHOD, ObjectType.COROUTINE]:
             return wrapped
         add_methods()
-        if obj_type == ObjectType.CLASS:
+        if obj_type in {ObjectType.MODULE, ObjectType.CLASS}:
             for attr_name, attr_value in members:
                 if need_to_wrap():
                     raises_exception = (isinstance(attr_value, tuple) and
@@ -247,12 +263,15 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                                                name=get_name(attr_value, attr_name),
                                                skip=skip,
                                                wrap_return_values=wrap_return_values,
-                                               wrap_filenames=wrap_filenames,
-                                               filename=get_obj_file(obj=attr_value) or filename,
-                                               wrapped_name_func=wrapped_name_func)
+                                               wrapped_name_func=wrapped_name_func,
+                                               wrapping_scope_regex=wrapping_scope_regex)
                         with suppress(Exception):
-                            type.__setattr__(wrapped, attr_name, attr_value_new)
-        if obj_type != ObjectType.CLASS:
+                            base_type = {
+                                ObjectType.MODULE: types.ModuleType,
+                                ObjectType.CLASS: type,
+                            }[obj_type]
+                            base_type.__setattr__(wrapped, attr_name, attr_value_new)
+        else:
             wrapped_class_name = get_name(obj.__class__)
             # noinspection PyArgumentList
             wrapped_class = _wrap(obj=obj.__class__,
@@ -261,10 +280,9 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                                   name=wrapped_class_name,
                                   skip=skip,
                                   wrap_return_values=wrap_return_values,
-                                  wrap_filenames=wrap_filenames,
-                                  filename=get_obj_file(obj=obj.__class__) or filename,
                                   wrapped_name_func=wrapped_name_func,
-                                  wrapped=wrapped.__class__)
+                                  wrapped=wrapped.__class__,
+                                  wrapping_scope_regex=wrapping_scope_regex)
             object.__setattr__(wrapped, '__class__', wrapped_class)
         return wrapped
 
@@ -277,9 +295,8 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                            name=get_name(result, 'result'),
                            skip=skip,
                            wrap_return_values=wrap_return_values,
-                           wrap_filenames=wrap_filenames,
-                           filename=filename,
-                           wrapped_name_func=wrapped_name_func)
+                           wrapped_name_func=wrapped_name_func,
+                           wrapping_scope_regex=wrapping_scope_regex)
         return result
 
     # noinspection PyShadowingNames
@@ -342,9 +359,8 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                                      name=name,
                                      skip=skip,
                                      wrap_return_values=wrap_return_values,
-                                     wrap_filenames=wrap_filenames,
-                                     filename=filename,
-                                     wrapped_name_func=wrapped_name_func)
+                                     wrapped_name_func=wrapped_name_func,
+                                     wrapping_scope_regex=wrapping_scope_regex)
             else:
                 result = obj_with_original_obj_as_self
         elif obj.__name__ == '__getattr__':
@@ -380,42 +396,8 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
                     result = True
         return result
 
-    # noinspection PyShadowingNames
-    def get_obj_file(obj):
-        # noinspection PyShadowingNames
-        def _get_obj_file(obj):
-            try:
-                result = (obj.__file__
-                          if hasattr(obj, '__file__') else
-                          sys.modules[obj.__module__].__file__
-                          if hasattr(obj, '__module__') else
-                          None)
-            except (AttributeError, KeyError):
-                result = None
-            return result
-
-        result = _get_obj_file(obj=obj)
-        if result is None:
-            result = _get_obj_file(obj=type(obj))
-        return result
-
-    def get_obj_library_files():
-        obj_file = get_obj_file(obj=obj)
-        if obj_file is not None:
-            obj_file = Path(obj_file)
-            if obj_file.name == '__init__.py':
-                result = obj_file.parent.glob('**/*.py')
-            else:
-                result = [obj_file]
-            result = [str(obj_file) for obj_file in result]
-        else:
-            result = []
-        result = frozenset(result)
-        return result
-
     methods_to_add = frozenset(methods_to_add)
     skip = frozenset(skip)
-    wrap_filenames = frozenset(wrap_filenames)
 
     if wrapped_name_func is None:
         # noinspection PyShadowingNames
@@ -427,18 +409,37 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
     if name is None:
         raise ValueError("name was not passed and obj.__name__ not found")
 
-    key = make_key(obj=obj,
-                   wrapper=wrapper,
-                   methods_to_add=methods_to_add,
-                   name=name,
-                   skip=skip,
-                   wrap_return_values=wrap_return_values,
-                   wrap_filenames=wrap_filenames,
-                   filename=filename,
-                   wrapped_name_func=wrapped_name_func)
+    key = make_key(
+        obj=obj,
+        wrapper=wrapper,
+        methods_to_add=methods_to_add,
+        name=name,
+        skip=skip,
+        wrap_return_values=wrap_return_values,
+        wrapped_name_func=wrapped_name_func,
+        wrapping_scope_regex=wrapping_scope_regex,
+    )
 
-    wrap_filenames = wrap_filenames or get_obj_library_files()
-    filename = get_obj_file(obj=obj) or filename
+    def get_module_name():
+        module = inspect.getmodule(obj)
+        if module:
+            return module.__name__
+        return ""
+
+    def get_library_name(module_name):
+        if module_name:
+            return module_name.partition(".")[0]
+        return ""
+
+    def get_default_wrapping_scope_regex():
+        module_name = get_module_name()
+        if module_name in STDLIB_MODULE_NAMES:
+            return STDLIB_MODULE_NAMES_REGEX
+        else:
+            library_name = get_library_name(module_name)
+            return f"{library_name}.*" if library_name else ".*"
+
+    wrapping_scope_regex = wrapping_scope_regex or get_default_wrapping_scope_regex()
 
     # noinspection PyUnusedLocal
     members = []
@@ -449,7 +450,8 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
         already_wrapped = key in _wrapped_objs
     except TypeError:
         already_wrapped = False
-    if filename not in wrap_filenames or is_in_skip():
+    module_name = get_module_name()
+    if not (not module_name or re.fullmatch(wrapping_scope_regex, get_module_name())) or is_in_skip():
         wrapped = obj
     elif already_wrapped:
         wrapped = _wrapped_objs[key]
@@ -462,7 +464,8 @@ def _wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_
     return wrapped
 
 
-def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, clear_cache=True):
+def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_values=False, clear_cache=True,
+         wrapping_scope_regex=None):
     """
     Wrap module, class, function or another variable recursively
 
@@ -477,14 +480,18 @@ def wrap(obj, wrapper=None, methods_to_add=(), name=None, skip=(), wrap_return_v
     :param bool wrap_return_values: If try, wrap return values of callables (only types, supported by wrap function \
     are supported)
     :param bool clear_cache: Clear wrapped objects cache after wrapping
+    :param Optional[str] wrapping_scope_regex: regex for module names that should be wrapped
     :return: Wrapped `obj`
     """
-    result = _wrap(obj=obj,
-                   wrapper=wrapper,
-                   methods_to_add=methods_to_add,
-                   name=name,
-                   skip=skip,
-                   wrap_return_values=wrap_return_values)
+    result = _wrap(
+        obj=obj,
+        wrapper=wrapper,
+        methods_to_add=methods_to_add,
+        name=name,
+        skip=skip,
+        wrap_return_values=wrap_return_values,
+        wrapping_scope_regex=wrapping_scope_regex,
+    )
     if clear_cache:
         _wrapped_objs.clear()
     return result

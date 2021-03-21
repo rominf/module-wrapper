@@ -1,0 +1,62 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyCompatibilityInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ourVersions">
+        <value>
+          <list size="1">
+            <item index="0" class="java.lang.String" itemvalue="3.7" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="16">
+            <item index="0" class="java.lang.String" itemvalue="python-systemd" />
+            <item index="1" class="java.lang.String" itemvalue="azure-storage" />
+            <item index="2" class="java.lang.String" itemvalue="pylint" />
+            <item index="3" class="java.lang.String" itemvalue="mock" />
+            <item index="4" class="java.lang.String" itemvalue="astroid" />
+            <item index="5" class="java.lang.String" itemvalue="python-snappy" />
+            <item index="6" class="java.lang.String" itemvalue="zstandard" />
+            <item index="7" class="java.lang.String" itemvalue="flake8" />
+            <item index="8" class="java.lang.String" itemvalue="azure" />
+            <item index="9" class="java.lang.String" itemvalue="asyncio" />
+            <item index="10" class="java.lang.String" itemvalue="pytest" />
+            <item index="11" class="java.lang.String" itemvalue="psycopg2-binary" />
+            <item index="12" class="java.lang.String" itemvalue="aiohttp" />
+            <item index="13" class="java.lang.String" itemvalue="cchardet" />
+            <item index="14" class="java.lang.String" itemvalue="pytest-asyncio" />
+            <item index="15" class="java.lang.String" itemvalue="kafka-python" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8Inspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="E252" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyStubPackagesAdvertiser" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="ordered-set-stubs==0.1.3" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="babelnet_lite.db.switches.*" />
+          <option value="graphdb_ext" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="Pylint" enabled="true" level="WARNING" enabled_by_default="true" />
+  </profile>
+</component>
