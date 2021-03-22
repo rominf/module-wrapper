@@ -8,7 +8,7 @@ import types
 
 
 __all__ = ['wrap', '__version__']
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 
 STDLIB_MODULE_NAMES = stdlib_list.stdlib_list()
@@ -437,7 +437,7 @@ def _wrap(
             return STDLIB_MODULE_NAMES_REGEX
         else:
             library_name = get_library_name(module_name)
-            return f"{library_name}.*" if library_name else ".*"
+            return rf"{library_name}(\..*)?" if library_name else ".*"
 
     wrapping_scope_regex = wrapping_scope_regex or get_default_wrapping_scope_regex()
 
